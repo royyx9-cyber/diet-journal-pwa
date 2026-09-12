@@ -1,0 +1,33 @@
+name: Auto Sync from Google Drive
+
+on:
+  schedule:
+    - cron: '0 * * * *' # 每小時自動執行一次
+  workflow_dispatch:     # 支援在 Actions 頁面手動點擊「Run workflow」立即抓取
+
+permissions:
+  contents: write        # 賦予機器人自動 Commit 與 Push 的寫入權限
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download latest index.html from Google Drive
+        run: |
+          curl -f -sL "https://drive.google.com/uc?export=download&id=1tPgHgmk_K1arTfr0MrpupfJ2HOI0V8Ef" -o index.html
+          if grep -q "<!DOCTYPE html>" index.html; then
+            echo "✅ 成功下載有效的 index.html"
+          else
+            echo "❌ 下載失敗或取得非 HTML 內容，請檢查雲端檔案是否已開啟公開連結檢視權限"
+            exit 1
+          fi
+
+      - name: Commit and Push Changes
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --staged --quiet || (git commit -m "Auto sync latest PWA version from Google Drive" && git push)
