@@ -1,0 +1,3080 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>飲食日誌與體態工程</title>
+
+<!-- PWA / iOS Web App Meta Tags -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="飲食日誌">
+<meta name="theme-color" content="#f6f8fa">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%232563eb' width='100' height='100' rx='22'/><text y='.9em' x='50%' font-size='60' text-anchor='middle'>🥗</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥗</text></svg>">
+
+<!-- Web Manifest via Data URI for single-file deployment -->
+<link rel="manifest" href='data:application/manifest+json,{"name":"飲食日誌與體態工程","short_name":"飲食日誌","start_url":".","display":"standalone","background_color":"%23f6f8fa","theme_color":"%232563eb","icons":[{"src":"data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><rect fill=%27%232563eb%27 width=%27100%27 height=%27100%27 rx=%2722%27/><text y=%27.9em%27 x=%2750%25%27 font-size=%2760%27 text-anchor=%27middle%27>🥗</text></svg>","sizes":"192x192 512x512","type":"image/svg+xml"}]}'>
+
+<style>
+  :root {
+    --bg-page: #f6f8fa;
+    --card-bg: #ffffff;
+    --border-subtle: #e2e8f0;
+    --border-muted: #cbd5e1;
+    --border-focus: #2563eb;
+    
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-tertiary: #94a3b8;
+    
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --accent-tint: #eff6ff;
+    --accent-border: #bfdbfe;
+    
+    --emerald: #059669;
+    --emerald-tint: #ecfdf5;
+    --emerald-border: #a7f3d0;
+    
+    --amber: #d97706;
+    --amber-tint: #fffbeb;
+    --amber-border: #fde68a;
+    
+    --indigo-ma: #6366f1;
+    --danger: #ef4444;
+    
+    --sat-accent: #0284c7;
+    --sat-tint: #f0f9ff;
+    --sun-accent: #e11d48;
+    --sun-tint: #fff1f2;
+
+    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Icons", "Helvetica Neue", "PingFang TC", "Noto Sans TC", sans-serif;
+    --font-mono: "SF Mono", "JetBrains Mono", Menlo, Monaco, Consolas, monospace;
+    
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-pill: 9999px;
+
+    --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+    --shadow-card: 0 1px 3px 0 rgba(15, 23, 42, 0.03), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+    --shadow-float: 0 12px 36px -4px rgba(15, 23, 42, 0.14), 0 4px 12px -2px rgba(15, 23, 42, 0.05);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
+  body {
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 13.5px;
+    line-height: 1.5;
+    padding: calc(20px + env(safe-area-inset-top)) 24px calc(110px + env(safe-area-inset-bottom)) 24px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+  }
+
+  .container {
+    max-width: 1380px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  /* 系統通知橫幅 (Toast) */
+  .system-toast {
+    position: fixed;
+    top: calc(16px + env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    background: #0f172a;
+    color: #ffffff;
+    padding: 10px 20px;
+    border-radius: var(--radius-pill);
+    font-size: 12.5px;
+    font-weight: 600;
+    box-shadow: var(--shadow-float);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    gap: 8px;
+    transition: opacity 0.3s ease;
+  }
+  .system-toast.error {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #f87171;
+  }
+  .system-toast.success {
+    background: #065f46;
+    color: #ecfdf5;
+  }
+
+  /* 頂部導航列 */
+  .top-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 14px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .nav-left { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .app-brand {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .app-brand::before {
+    content: "";
+    display: inline-block;
+    width: 4px;
+    height: 18px;
+    background: var(--accent);
+    border-radius: var(--radius-pill);
+  }
+  .nav-tabs {
+    display: flex;
+    background: #e9eef5;
+    padding: 3px;
+    border-radius: var(--radius-md);
+    gap: 2px;
+  }
+  .tab-btn {
+    border: none;
+    background: transparent;
+    padding: 6px 16px;
+    border-radius: calc(var(--radius-md) - 2px);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    font-family: inherit;
+  }
+  .tab-btn.active {
+    background: #ffffff;
+    color: var(--text-primary);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  }
+  .nav-backup-group { display: flex; align-items: center; gap: 8px; }
+  .btn-backup {
+    border: 1px solid var(--border-subtle);
+    background: #ffffff;
+    color: var(--text-secondary);
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: inherit;
+    box-shadow: var(--shadow-sm);
+  }
+  .btn-backup:hover {
+    background: #f8fafc;
+    color: var(--text-primary);
+    border-color: var(--border-muted);
+  }
+
+  .view-panel { display: block; }
+  .view-panel.hidden { display: none; }
+
+  /* 月份控制工具列 */
+  .ledger-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 0 4px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .ledger-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .ledger-toolbar-info {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+  }
+  .btn-jump-today {
+    border: 1px solid var(--accent-border);
+    background: var(--accent-tint);
+    color: var(--accent);
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    transition: all 0.15s;
+  }
+  .btn-jump-today:hover { background: #dbeafe; }
+  .btn-toggle-all {
+    border: none;
+    background: transparent;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    transition: background 0.12s;
+  }
+  .btn-toggle-all:hover { background: var(--accent-tint); }
+
+  /* 飲食日誌主表格 */
+  .journal-ledger {
+    background: var(--card-bg);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+  }
+  .ledger-header {
+    display: grid;
+    grid-template-columns: 230px repeat(4, 1fr);
+    background: #f8fafc;
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 10px 18px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  /* 月份折疊樣式 */
+  .month-group-block { border-bottom: 1px solid var(--border-subtle); }
+  .month-group-block:last-child { border-bottom: none; }
+  .month-group-header {
+    background: #f8fafc;
+    padding: 8px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    border-top: 1px solid var(--border-subtle);
+    transition: background-color 0.12s ease;
+  }
+  .month-group-block:first-child .month-group-header { border-top: none; }
+  .month-group-header:hover { background-color: #f1f5f9; }
+  .month-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .month-chevron {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .month-chevron.collapsed { transform: rotate(-90deg); }
+  .month-badge {
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+    background: #ffffff;
+    border: 1px solid var(--border-subtle);
+    padding: 1px 7px;
+    border-radius: var(--radius-pill);
+  }
+  .month-fold-hint {
+    font-size: 11.5px;
+    color: var(--text-tertiary);
+    font-family: var(--font-mono);
+  }
+  .month-group-rows.hidden { display: none; }
+
+  .ledger-row {
+    display: grid;
+    grid-template-columns: 230px repeat(4, 1fr);
+    border-bottom: 1px solid var(--border-subtle);
+    min-height: 52px;
+    transition: background-color 0.12s ease;
+  }
+  .ledger-row:last-child { border-bottom: none; }
+  .ledger-row:hover { background-color: #fbfcfd; }
+  .ledger-row.is-today {
+    background-color: #f0f7ff;
+  }
+
+  .ledger-row.weekend-sat { background-color: #fafcfe; }
+  .ledger-row.weekend-sat:hover { background-color: #f2f7fd; }
+  .date-cell.weekend-sat {
+    background-color: var(--sat-tint);
+    border-left: 3px solid var(--sat-accent);
+  }
+  .date-week.sat-highlight {
+    color: var(--sat-accent);
+    background: #e0f2fe;
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+  }
+  .ledger-row.weekend-sun { background-color: #fefbfc; }
+  .ledger-row.weekend-sun:hover { background-color: #fdf3f4; }
+  .date-cell.weekend-sun {
+    background-color: var(--sun-tint);
+    border-left: 3px solid var(--sun-accent);
+  }
+  .date-week.sun-highlight {
+    color: var(--sun-accent);
+    background: #ffe4e6;
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+  }
+
+  .date-cell {
+    padding: 10px 18px;
+    border-right: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    background: #ffffff;
+    transition: background-color 0.12s ease;
+  }
+  .date-title { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .date-num {
+    font-size: 13.5px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    color: var(--text-primary);
+  }
+  .today-tag {
+    font-size: 10.5px;
+    font-weight: 700;
+    background: var(--accent);
+    color: #ffffff;
+    padding: 1px 6px;
+    border-radius: var(--radius-pill);
+  }
+  .date-week { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+  .date-week.wed-highlight {
+    color: var(--accent);
+    background: var(--accent-tint);
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+  }
+  .wed-capsule {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+    background: #f1f5f9;
+    border-radius: var(--radius-sm);
+    padding: 2px 7px;
+    width: fit-content;
+    border: 1px solid #e2e8f0;
+  }
+  .wed-capsule input {
+    border: none;
+    background: transparent;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    width: 42px;
+    outline: none;
+    text-align: right;
+  }
+  .wed-capsule input:focus {
+    background: #ffffff;
+    border-radius: 3px;
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  .wed-unit { color: var(--text-tertiary); font-size: 11px; }
+
+  /* 儲存格與極簡品項排版 */
+  .meal-cell {
+    padding: 6px 14px;
+    border-right: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 2px;
+    cursor: text;
+    position: relative;
+    transition: all 0.12s ease;
+  }
+  .meal-cell.cell-focused {
+    box-shadow: inset 0 0 0 1.5px var(--accent);
+    background: #f8faff;
+  }
+  .meal-cell:last-child { border-right: none; }
+  
+  .chip-item {
+    display: inline-flex;
+    align-items: center;
+    background: transparent;
+    border: none;
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    width: fit-content;
+    max-width: 100%;
+    line-height: 1.4;
+    transition: background-color 0.12s ease;
+  }
+  .chip-item:hover { background-color: rgba(15, 23, 42, 0.04); }
+  .chip-text {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    word-break: break-word;
+  }
+  .chip-text::before {
+    content: "•";
+    color: var(--text-tertiary);
+    font-size: 12px;
+    line-height: 1;
+    transition: color 0.12s ease;
+  }
+  .chip-item:hover .chip-text::before { color: var(--accent); }
+  .chip-del {
+    margin-left: 6px;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    font-size: 11px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    opacity: 0;
+    transition: opacity 0.12s ease, color 0.12s ease, background-color 0.12s ease;
+  }
+  .chip-item:hover .chip-del { opacity: 0.7; }
+  .chip-del:hover {
+    color: var(--danger) !important;
+    background: #fee2e2;
+    opacity: 1 !important;
+  }
+  
+  .ghost-input {
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--text-primary);
+    padding: 3px 4px;
+    outline: none;
+    width: 100%;
+    border-radius: var(--radius-sm);
+  }
+  .ghost-input:focus {
+    background: #ffffff;
+    box-shadow: 0 0 0 1.5px var(--accent);
+  }
+  
+  .footer-ctrl { display: flex; gap: 8px; padding-top: 4px; flex-wrap: wrap; }
+  .btn-step-day {
+    border: 1px solid var(--border-subtle);
+    background: var(--card-bg);
+    color: var(--text-primary);
+    padding: 9px 20px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-shadow: var(--shadow-sm);
+    font-family: inherit;
+  }
+  .btn-step-day:hover {
+    background: #f8fafc;
+    border-color: var(--border-muted);
+  }
+
+  /* 體態工程儀表板 */
+  .metrics-board {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .target-trajectory-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    box-shadow: var(--shadow-card);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .trajectory-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .trajectory-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .trajectory-title {
+    font-size: 14.5px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    color: var(--text-primary);
+  }
+  .trajectory-tag {
+    font-size: 11.5px;
+    font-weight: 700;
+    background: var(--accent-tint);
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--accent-border);
+    font-family: var(--font-mono);
+  }
+  .trajectory-meta {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .eta-pill {
+    background: var(--emerald-tint);
+    color: var(--emerald);
+    border: 1px solid var(--emerald-border);
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+  }
+  .eta-pill.warning {
+    background: var(--amber-tint);
+    color: var(--amber);
+    border-color: var(--amber-border);
+  }
+
+  .progress-track-bg {
+    width: 100%;
+    height: 8px;
+    background: #f1f5f9;
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+  }
+  .progress-track-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #2563eb 0%, #059669 100%);
+    border-radius: var(--radius-pill);
+    width: 0%;
+    transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .trajectory-nodes {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+  }
+  .trajectory-node strong {
+    color: var(--text-primary);
+    font-weight: 700;
+  }
+
+  /* 階段里程碑指示器 */
+  .milestone-stages-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: 4px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border-subtle);
+  }
+  .milestone-stage-item {
+    background: #f8fafc;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 8px 12px;
+    font-size: 11.5px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .milestone-stage-item.completed {
+    background: var(--emerald-tint);
+    border-color: var(--emerald-border);
+  }
+  .milestone-stage-item.current {
+    background: var(--accent-tint);
+    border-color: var(--accent-border);
+  }
+  .stage-title { font-weight: 700; color: var(--text-primary); font-family: var(--font-mono); }
+  .stage-desc { font-size: 10.5px; color: var(--text-secondary); }
+
+  /* 核心 KPI 網格 */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+  .kpi-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
+    box-shadow: var(--shadow-card);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 8px;
+    transition: all 0.15s ease;
+  }
+  .kpi-card:hover { box-shadow: 0 6px 18px -2px rgba(15, 23, 42, 0.06); }
+  .kpi-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .kpi-card-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .kpi-card-icon {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+  }
+  .kpi-stat-row { display: flex; align-items: baseline; gap: 5px; }
+  .kpi-big-num {
+    font-size: 28px;
+    font-weight: 800;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.04em;
+    color: var(--text-primary);
+  }
+  .kpi-stat-unit {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+  .kpi-pill-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 11.5px;
+  }
+
+  .badge-diff {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 7px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    width: fit-content;
+  }
+  .badge-diff.drop {
+    background: var(--emerald-tint);
+    color: var(--emerald);
+    border: 1px solid var(--emerald-border);
+  }
+  .badge-diff.gain {
+    background: var(--amber-tint);
+    color: var(--amber);
+    border: 1px solid var(--amber-border);
+  }
+  .badge-diff.neutral {
+    background: #f1f5f9;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-subtle);
+  }
+
+  /* 趨勢圖表面板 */
+  .chart-panel-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    box-shadow: var(--shadow-card);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .chart-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .chart-title-block h3 {
+    font-size: 14.5px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    color: var(--text-primary);
+  }
+  .chart-title-block p {
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    margin-top: 1px;
+  }
+  .chart-controls {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .chart-range-group {
+    display: flex;
+    background: #f1f5f9;
+    padding: 2px;
+    border-radius: var(--radius-sm);
+    gap: 2px;
+  }
+  .range-btn {
+    border: none;
+    background: transparent;
+    padding: 3px 8px;
+    border-radius: calc(var(--radius-sm) - 1px);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-family: var(--font-mono);
+  }
+  .range-btn.active {
+    background: #ffffff;
+    color: var(--text-primary);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  }
+  .chart-legend-block {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    font-weight: 600;
+  }
+  .legend-bullet { display: flex; align-items: center; gap: 4px; }
+  .bullet-dot { width: 7px; height: 7px; border-radius: 50%; }
+  .bullet-dot.weight { background: var(--accent); }
+  .bullet-dot.fat { background: var(--amber); }
+  .bullet-line-ma { width: 14px; height: 2px; background: var(--indigo-ma); border-radius: 1px; }
+  .bullet-line-target { width: 14px; height: 2px; border-top: 2px dashed var(--text-tertiary); }
+
+  .chart-interactive-container {
+    position: relative;
+    width: 100%;
+    height: 280px;
+  }
+  .svg-canvas { width: 100%; height: 100%; overflow: visible; }
+
+  .chart-tooltip {
+    position: absolute;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: #ffffff;
+    padding: 9px 13px;
+    border-radius: var(--radius-md);
+    font-size: 11.5px;
+    pointer-events: none;
+    box-shadow: var(--shadow-float);
+    display: none;
+    flex-direction: column;
+    gap: 3px;
+    z-index: 50;
+    min-width: 160px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  .tooltip-date {
+    font-size: 10.5px;
+    color: #94a3b8;
+    font-family: var(--font-mono);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    padding-bottom: 3px;
+    margin-bottom: 2px;
+  }
+  .tooltip-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .tooltip-row span:last-child { font-weight: 700; }
+
+  /* 歷史審計表格 */
+  .history-table-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+  }
+  .table-header-bar {
+    padding: 12px 20px;
+    background: #f8fafc;
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .table-header-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    color: var(--text-primary);
+  }
+  .table-header-meta {
+    font-size: 11.5px;
+    color: var(--text-tertiary);
+    font-family: var(--font-mono);
+  }
+  .hist-grid-row {
+    display: grid;
+    grid-template-columns: 180px 140px 130px 130px 130px 140px 1fr;
+    padding: 10px 20px;
+    font-size: 12.5px;
+    align-items: center;
+    border-bottom: 1px solid var(--border-subtle);
+    transition: background-color 0.12s ease;
+  }
+  .hist-grid-row:last-child { border-bottom: none; }
+  .hist-grid-row:not(.head):hover { background-color: #fbfcfd; }
+  .hist-grid-row.head {
+    background: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1.5px solid var(--border-subtle);
+  }
+  .table-input-cell { display: inline-flex; align-items: center; gap: 4px; }
+  .table-metric-input {
+    width: 60px;
+    padding: 3px 6px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    background: #ffffff;
+    outline: none;
+    text-align: right;
+    transition: all 0.15s ease;
+  }
+  .table-metric-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-tint);
+  }
+
+  /* 底部懸浮快選膠囊底欄 (適配 Safe Area) */
+  .floating-dock-preset {
+    position: fixed;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 32px);
+    max-width: 1380px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: var(--radius-pill);
+    padding: 8px 16px;
+    box-shadow: var(--shadow-float);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 100;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  .floating-dock-preset.hidden { display: none; }
+  .floating-dock-preset.keyboard-active {
+    opacity: 0.15;
+    pointer-events: none;
+    transform: translateX(-50%) translateY(10px);
+  }
+  .dock-meta-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border-subtle);
+    padding-right: 12px;
+  }
+  .dock-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .dock-target-badge {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--accent);
+    background: var(--accent-tint);
+    border: 1px solid var(--accent-border);
+    padding: 2px 8px;
+    border-radius: var(--radius-pill);
+    font-family: var(--font-mono);
+    white-space: nowrap;
+  }
+  .dock-chips-scroll {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+    flex-grow: 1;
+  }
+  .dock-chips-scroll::-webkit-scrollbar { display: none; }
+  .dock-chip {
+    background: #ffffff;
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    user-select: none;
+    flex-shrink: 0;
+    box-shadow: var(--shadow-sm);
+  }
+  .dock-chip:hover {
+    background: #f8fafc;
+    border-color: var(--border-muted);
+    transform: translateY(-1px);
+  }
+  .dock-chip-count {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    color: var(--text-tertiary);
+    font-weight: 700;
+  }
+
+  /* 同步管理彈窗 Modal */
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(4px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal-card {
+    background: #ffffff;
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: var(--shadow-float);
+    border: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal-title { font-size: 15px; font-weight: 700; }
+  .modal-close {
+    background: transparent; border: none; font-size: 16px;
+    cursor: pointer; color: var(--text-tertiary);
+  }
+  .sync-card-row {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .sync-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+  .sync-textarea {
+    width: 100%; height: 80px; padding: 8px; font-family: var(--font-mono);
+    font-size: 11px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);
+    resize: none;
+  }
+
+  /* 行動端自適應排版 */
+  @media (max-width: 840px) {
+    body { padding: calc(14px + env(safe-area-inset-top)) 12px calc(110px + env(safe-area-inset-bottom)) 12px; }
+    
+    input[type="text"], input[type="number"], .ghost-input, .table-metric-input, .wed-capsule input {
+      font-size: 16px !important; /* 防止 iOS 縮放 */
+    }
+
+    .top-nav { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .nav-backup-group { width: 100%; justify-content: space-between; flex-wrap: wrap; }
+
+    .ledger-header { display: none; }
+    .ledger-row {
+      display: flex;
+      flex-direction: column;
+      border-bottom: 2px solid var(--border-subtle);
+      padding-bottom: 8px;
+    }
+    .date-cell { border-right: none; border-bottom: 1px solid var(--border-subtle); padding: 8px 12px; }
+    .meal-cell {
+      border-right: none;
+      border-bottom: 1px dashed #f1f5f9;
+      padding: 6px 12px;
+      min-height: 44px;
+    }
+    .meal-cell::before {
+      content: attr(data-meal-label);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-tertiary);
+      margin-bottom: 2px;
+    }
+
+    .chip-del { opacity: 0.6; }
+
+    .milestone-stages-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .hist-grid-row { grid-template-columns: 130px 90px 80px 80px 80px 90px 1fr; font-size: 11.5px; padding: 8px 12px; }
+
+    .floating-dock-preset {
+      bottom: calc(10px + env(safe-area-inset-bottom));
+      width: calc(100% - 16px);
+      padding: 6px 12px;
+    }
+  }
+
+  /* === 深色模式 (Dark Theme System) === */
+  body.dark-theme {
+    --bg-page: #0a0e17;
+    --card-bg: #111827;
+    --border-subtle: #1f293d;
+    --border-muted: #374151;
+    --border-focus: #3b82f6;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-tertiary: #64748b;
+    --accent: #3b82f6;
+    --accent-hover: #60a5fa;
+    --accent-tint: #1e293b;
+    --accent-border: #2563eb;
+    --emerald: #10b981;
+    --emerald-tint: #064e3b;
+    --emerald-border: #047857;
+    --amber: #f59e0b;
+    --amber-tint: #451a03;
+    --amber-border: #b45309;
+    --sat-accent: #38bdf8;
+    --sat-tint: #0c2d48;
+    --sun-accent: #fb7185;
+    --sun-tint: #4c0519;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+    --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 4px 12px -2px rgba(0, 0, 0, 0.4);
+    --shadow-float: 0 12px 36px -4px rgba(0, 0, 0, 0.6), 0 4px 12px -2px rgba(0, 0, 0, 0.4);
+  }
+  body.dark-theme .nav-tabs { background: #1e293b; }
+  body.dark-theme .tab-btn.active { background: #0f172a; color: #f8fafc; }
+  body.dark-theme .btn-backup { background: #1e293b; border-color: #334155; color: #e2e8f0; }
+  body.dark-theme .btn-backup:hover { background: #334155; }
+  body.dark-theme .ledger-header, body.dark-theme .month-group-header, body.dark-theme .table-header-bar { background: #0f172a; }
+  body.dark-theme .month-group-header:hover { background: #1e293b; }
+  body.dark-theme .date-cell { background: #111827; }
+  body.dark-theme .wed-capsule { background: #1e293b; border-color: #334155; }
+  body.dark-theme .wed-capsule input { color: #f8fafc; }
+  body.dark-theme .ghost-input { color: #f8fafc; }
+  body.dark-theme .chip-item { color: #e2e8f0; }
+  body.dark-theme .chip-item:hover { background: rgba(255, 255, 255, 0.08); }
+  body.dark-theme .btn-step-day { background: #1e293b; border-color: #334155; color: #e2e8f0; }
+  body.dark-theme .chart-range-group { background: #1e293b; }
+  body.dark-theme .range-btn.active { background: #0f172a; color: #f8fafc; }
+  body.dark-theme .floating-dock-preset { background: rgba(17, 24, 39, 0.88); border-color: #334155; }
+  body.dark-theme .dock-chip { background: #1e293b; border-color: #334155; color: #f8fafc; }
+  body.dark-theme .modal-card { background: #111827; border-color: #334155; color: #f8fafc; }
+  body.dark-theme .sync-textarea { background: #0f172a; border-color: #334155; color: #f8fafc; }
+  body.dark-theme .hist-grid-row.head { background: #0f172a; }
+  body.dark-theme .table-metric-input { background: #0f172a; border-color: #334155; color: #f8fafc; }
+  body.dark-theme .milestone-stage-item { background: #1e293b; border-color: #334155; }
+  body.dark-theme .journal-search-input { background: #1e293b; border-color: #334155; color: #f8fafc; }
+  body.dark-theme .ledger-row:hover { background-color: #162032; }
+  body.dark-theme .ledger-row.is-today { background-color: #172554; }
+  body.dark-theme .progress-track-bg { background: #1e293b; }
+
+  /* === 複製前日按鈕與搜尋介面 === */
+  .btn-copy-yesterday {
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    font-size: 11px;
+    cursor: pointer;
+    padding: 1px 5px;
+    border-radius: var(--radius-sm);
+    transition: all 0.12s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .btn-copy-yesterday:hover {
+    color: var(--accent);
+    background: var(--accent-tint);
+  }
+
+  .search-wrap {
+    display: inline-flex;
+    align-items: center;
+    background: var(--card-bg);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-pill);
+    padding: 2px 10px;
+    gap: 6px;
+    box-shadow: var(--shadow-sm);
+  }
+  .search-icon { font-size: 11px; color: var(--text-tertiary); }
+  .journal-search-input {
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--text-primary);
+    outline: none;
+    width: 140px;
+  }
+  .search-clear-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    font-size: 11px;
+    cursor: pointer;
+    padding: 0 2px;
+  }
+  .search-result-count {
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 600;
+    font-family: var(--font-mono);
+  }
+
+  .chip-item.search-highlight {
+    background-color: #fef08a !important;
+    color: #854d0e !important;
+    font-weight: 700 !important;
+    border-radius: 4px;
+    animation: pulseHighlight 1.5s infinite alternate;
+  }
+  body.dark-theme .chip-item.search-highlight {
+    background-color: #854d0e !important;
+    color: #fef08a !important;
+  }
+  @keyframes pulseHighlight {
+    0% { transform: scale(1); }
+    100% { transform: scale(1.05); }
+  }
+
+
+  /* === v10: 連續記錄打卡徽章 (Streak Badge) === */
+  .streak-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+    border: 1px solid #fed7aa;
+    color: #c2410c;
+    font-size: 11.5px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    padding: 2px 10px;
+    border-radius: var(--radius-pill);
+    box-shadow: 0 1px 2px rgba(234, 88, 12, 0.08);
+  }
+  body.dark-theme .streak-badge {
+    background: linear-gradient(135deg, #431407 0%, #2a0b03 100%);
+    border-color: #9a3412;
+    color: #fdba74;
+  }
+
+  /* === v10: 高蛋白飲食辨識與徽章 (Protein Smart Tag) === */
+  .protein-summary-pill {
+    font-size: 10.5px;
+    color: #047857;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    width: fit-content;
+    font-family: var(--font-mono);
+    margin-top: 3px;
+  }
+  body.dark-theme .protein-summary-pill {
+    color: #34d399;
+    background: #064e3b;
+    border-color: #047857;
+  }
+  .protein-chip-dot {
+    font-size: 10px;
+    margin-right: 2px;
+  }
+
+  /* === v10: 週度體態檢核卡 (MacroFactor-style Weekly Check-in Card) === */
+  .weekly-checkin-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    box-shadow: var(--shadow-card);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    border-left: 4px solid var(--accent);
+  }
+  .checkin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .checkin-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .checkin-badge {
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    background: var(--accent-tint);
+    color: var(--accent);
+    border: 1px solid var(--accent-border);
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+  }
+  .checkin-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .checkin-date {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    font-family: var(--font-mono);
+  }
+  .checkin-metrics-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    background: #f8fafc;
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    border: 1px solid var(--border-subtle);
+  }
+  body.dark-theme .checkin-metrics-row {
+    background: #0f172a;
+    border-color: #1e293b;
+  }
+  .checkin-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .checkin-stat-label {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-weight: 600;
+  }
+  .checkin-stat-val {
+    font-size: 16px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+  }
+  .checkin-feedback {
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: var(--radius-md);
+    padding: 10px 16px;
+    font-weight: 500;
+  }
+  body.dark-theme .checkin-feedback {
+    background: #1e293b;
+    border-color: #3b82f6;
+    color: #e2e8f0;
+  }
+
+  /* 快捷鍵彈窗樣式 */
+  .shortcut-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    font-size: 12.5px;
+  }
+  .shortcut-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: #f8fafc;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+  }
+  body.dark-theme .shortcut-item {
+    background: #0f172a;
+    border-color: #1e293b;
+  }
+  .shortcut-kbd {
+    background: #ffffff;
+    border: 1px solid var(--border-muted);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+  }
+  body.dark-theme .shortcut-kbd {
+    background: #1e293b;
+    border-color: #475569;
+    color: #f8fafc;
+  }
+
+  @media (max-width: 840px) {
+    .checkin-metrics-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .shortcut-list { grid-template-columns: 1fr; }
+  }
+
+
+  /* === v11: 能量平衡與熱量赤字動態儀表 === */
+  .energy-balance-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 10px;
+    background: #f1f5f9;
+    padding: 10px 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle);
+  }
+  body.dark-theme .energy-balance-row {
+    background: #0f172a;
+    border-color: #1e293b;
+  }
+  .energy-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .energy-stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+  }
+  .energy-stat-val {
+    font-size: 14.5px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+  }
+
+  /* === v11: 底部懸浮固定原型食材快選盤 === */
+  .dock-tab-toggle {
+    display: inline-flex;
+    background: #e2e8f0;
+    padding: 2px;
+    border-radius: var(--radius-pill);
+    gap: 2px;
+    margin-right: 4px;
+    flex-shrink: 0;
+  }
+  body.dark-theme .dock-tab-toggle {
+    background: #1e293b;
+  }
+  .dock-tab-btn {
+    border: none;
+    background: transparent;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    padding: 2px 8px;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: inherit;
+  }
+  .dock-tab-btn.active {
+    background: #ffffff;
+    color: var(--text-primary);
+    box-shadow: var(--shadow-sm);
+  }
+  body.dark-theme .dock-tab-btn.active {
+    background: #0f172a;
+    color: #f8fafc;
+  }
+
+  .macro-tag-chip {
+    font-size: 11.5px !important;
+    font-weight: 600 !important;
+    border: 1px solid var(--border-subtle) !important;
+  }
+  .macro-tag-chip.protein { background: #eff6ff !important; color: #1d4ed8 !important; border-color: #bfdbfe !important; }
+  .macro-tag-chip.carb { background: #fefce8 !important; color: #a16207 !important; border-color: #fef08a !important; }
+  .macro-tag-chip.veggie { background: #ecfdf5 !important; color: #047857 !important; border-color: #a7f3d0 !important; }
+  .macro-tag-chip.drink { background: #faf5ff !important; color: #6b21a8 !important; border-color: #e9d5ff !important; }
+
+  body.dark-theme .macro-tag-chip.protein { background: #172554 !important; color: #93c5fd !important; border-color: #1e40af !important; }
+  body.dark-theme .macro-tag-chip.carb { background: #422006 !important; color: #fde047 !important; border-color: #854d0e !important; }
+  body.dark-theme .macro-tag-chip.veggie { background: #064e3b !important; color: #6ee7b7 !important; border-color: #047857 !important; }
+  body.dark-theme .macro-tag-chip.drink { background: #3b0764 !important; color: #d8b4fe !important; border-color: #6b21a8 !important; }
+
+  @media (max-width: 840px) {
+    .energy-balance-row { grid-template-columns: 1fr; gap: 6px; }
+  }
+
+</style>
+</head>
+<body>
+
+<div id="systemToast" class="system-toast">
+  <span id="toastMsg">系統訊息</span>
+</div>
+
+<div class="container">
+  <header class="top-nav">
+    <div class="nav-left">
+      <div class="app-brand" id="navTitle">飲食日誌</div>
+      <div class="nav-tabs">
+        <button class="tab-btn active" id="btnTabJournal" onclick="navigate('journal')">飲食日誌</button>
+        <button class="tab-btn" id="btnTabMetrics" onclick="navigate('metrics')">體態工程</button>
+      </div>
+    </div>
+    <div class="nav-backup-group">
+      <button class="btn-backup" onclick="openSyncModal()" title="資料跨裝置同步與雲端代碼">📲 跨機同步</button>
+      <button class="btn-backup" onclick="openShortcutsModal()" title="查看鍵盤快速鍵">⌨️ 快捷鍵</button>
+      <button class="btn-backup" id="themeToggleBtn" onclick="toggleTheme()" title="切換深色/淺色主題">🌙 深色</button>
+      <button class="btn-backup" onclick="exportCsv()" title="匯出 Excel / Google Sheets 相容 CSV 試算表">📊 匯出 CSV</button>
+      <button class="btn-backup" onclick="exportBackupJson()" title="導出完整 JSON 格式備份檔">匯出備份</button>
+      <button class="btn-backup" onclick="triggerImportJson()" title="從本機 JSON 備份檔恢復數據">匯入還原</button>
+      <input type="file" id="fileImportJson" accept=".json" style="display:none" onchange="handleImportJson(event)">
+    </div>
+  </header>
+
+  <!-- 視圖 1：飲食日誌 -->
+  <main id="viewJournal" class="view-panel">
+    <div class="ledger-toolbar">
+      <div class="ledger-toolbar-left">
+        <div class="ledger-toolbar-info" id="ledgerToolbarInfo">總計 0 天紀錄</div>
+        <div class="streak-badge" id="streakBadge" title="飲食日誌連續打卡追蹤">🔥 計算中...</div>
+        <button class="btn-jump-today" onclick="scrollToToday()">📍 回到今天</button>
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="journalSearchInput" class="journal-search-input" placeholder="搜尋飲食歷史..." oninput="handleJournalSearch(this.value)">
+          <button id="searchClearBtn" class="search-clear-btn" onclick="clearJournalSearch()" style="display:none">✕</button>
+        </div>
+        <span id="searchResultCount" class="search-result-count" style="display:none"></span>
+      </div>
+      <button class="btn-toggle-all" id="btnToggleAllMonths" onclick="toggleAllMonths()">全部收合歷史月份</button>
+    </div>
+
+    <div class="journal-ledger">
+      <div class="ledger-header">
+        <div>日期 (西元)</div>
+        <div>早餐</div>
+        <div>午餐</div>
+        <div>晚餐</div>
+        <div>點心 / 飲品</div>
+      </div>
+      <div id="ledgerRows"></div>
+    </div>
+
+    <div class="footer-ctrl">
+      <button class="btn-step-day" id="btnNextDay">＋ 新增下一天</button>
+    </div>
+  </main>
+
+  <!-- 視圖 2：體態工程 -->
+  <main id="viewMetrics" class="view-panel hidden">
+    <div class="metrics-board">
+
+      <section class="target-trajectory-card">
+        <div class="trajectory-header">
+          <div class="trajectory-title-wrap">
+            <span class="trajectory-title">長期體態重塑進度 (Milestone Track)</span>
+            <span class="trajectory-tag" id="trajectoryPercentTag">達成率 0%</span>
+          </div>
+          <div class="trajectory-meta">
+            <span>剩餘需減量：<strong id="trajectoryRemainingKg" style="color:var(--text-primary); font-weight:700;">--</strong> kg</span>
+            <span id="trajectoryEtaWrap" class="eta-pill">預估達成日：計算中</span>
+          </div>
+        </div>
+        <div class="progress-track-bg">
+          <div class="progress-track-fill" id="trajectoryProgressBar"></div>
+        </div>
+        <div class="trajectory-nodes">
+          <span class="trajectory-node">起始基準：<strong>87.0 kg</strong></span>
+          <span class="trajectory-node" id="trajectoryCurrentNode">最新量測：<strong>--</strong></span>
+          <span class="trajectory-node">終極目標：<strong>67.0 kg</strong></span>
+        </div>
+
+        <!-- 次級階段里程碑 (每 5kg 一階段) -->
+        <div class="milestone-stages-grid" id="milestoneStagesGrid">
+          <div class="milestone-stage-item" id="stage-1">
+            <span class="stage-title">階段一: 82.0 kg</span>
+            <span class="stage-desc" id="stage-1-desc">減脂啟動 -5kg</span>
+          </div>
+          <div class="milestone-stage-item" id="stage-2">
+            <span class="stage-title">階段二: 77.0 kg</span>
+            <span class="stage-desc" id="stage-2-desc">破 80 關卡 -10kg</span>
+          </div>
+          <div class="milestone-stage-item" id="stage-3">
+            <span class="stage-title">階段三: 72.0 kg</span>
+            <span class="stage-desc" id="stage-3-desc">深層線條 -15kg</span>
+          </div>
+          <div class="milestone-stage-item" id="stage-4">
+            <span class="stage-title">階段四: 67.0 kg</span>
+            <span class="stage-desc" id="stage-4-desc">終極目標 -20kg</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- v10: 最新週度體態工程檢核卡 (MacroFactor-style Weekly Check-in) -->
+      <section class="weekly-checkin-card" id="weeklyCheckinCard">
+        <div class="checkin-header">
+          <div class="checkin-title-wrap">
+            <span class="checkin-badge">WEEKLY AUDIT</span>
+            <span class="checkin-title">週度體態工程檢核診斷 (Weekly Check-in)</span>
+          </div>
+          <span class="checkin-date" id="checkinDateLabel">--</span>
+        </div>
+        <div class="checkin-body">
+          <div class="checkin-metrics-row">
+            <div class="checkin-stat">
+              <span class="checkin-stat-label">週體重變動</span>
+              <span class="checkin-stat-val" id="checkinWeightDelta">--</span>
+            </div>
+            <div class="checkin-stat">
+              <span class="checkin-stat-label">體脂率變化</span>
+              <span class="checkin-stat-val" id="checkinFatDelta">--</span>
+            </div>
+            <div class="checkin-stat">
+              <span class="checkin-stat-label">去脂體重 (LBM)</span>
+              <span class="checkin-stat-val" id="checkinLbmDelta">--</span>
+            </div>
+            <div class="checkin-stat">
+              <span class="checkin-stat-label">近7日飲食覆蓋</span>
+              <span class="checkin-stat-val" id="checkinComplianceRate">--</span>
+            </div>
+          </div>
+
+          <!-- v11: 動態能量赤字與消耗代謝估算 (MacroFactor Caloric Expenditure Model) -->
+          <div class="energy-balance-row" id="energyBalanceRow">
+            <div class="energy-stat">
+              <span class="energy-stat-label">動態每日赤字估算</span>
+              <span class="energy-stat-val" id="checkinDailyDeficit">--</span>
+            </div>
+            <div class="energy-stat">
+              <span class="energy-stat-label">預估總消耗 (Est. TDEE)</span>
+              <span class="energy-stat-val" id="checkinEstimatedTdee">--</span>
+            </div>
+            <div class="energy-stat">
+              <span class="energy-stat-label">減脂品質 (Fat vs LBM)</span>
+              <span class="energy-stat-val" id="checkinFatQuality">--</span>
+            </div>
+          </div>
+          <div class="checkin-feedback" id="checkinFeedbackText" style="margin-top:12px;">
+            正在分析最新週期體態數據與能量平衡趨勢...
+          </div>
+        </div>
+      </section>
+
+      <section class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-card-header">
+            <span class="kpi-card-title">最新體重 (Weight)</span>
+            <span class="kpi-card-icon" style="background:#dbeafe; color:#1d4ed8;">WT</span>
+          </div>
+          <div class="kpi-stat-row">
+            <span class="kpi-big-num" id="kpiWeight">--</span>
+            <span class="kpi-stat-unit">kg</span>
+          </div>
+          <div class="kpi-pill-wrap" id="kpiWeightDiffWrap">
+            <span class="badge-diff neutral">無前週數據</span>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-card-header">
+            <span class="kpi-card-title">最新體脂率 (Body Fat)</span>
+            <span class="kpi-card-icon" style="background:#fef3c7; color:#b45309;">BF</span>
+          </div>
+          <div class="kpi-stat-row">
+            <span class="kpi-big-num" id="kpiFat">--</span>
+            <span class="kpi-stat-unit">%</span>
+          </div>
+          <div class="kpi-pill-wrap" id="kpiFatDiffWrap">
+            <span class="badge-diff neutral">無前週數據</span>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-card-header">
+            <span class="kpi-card-title">去脂體重與代謝 (LBM / BMR)</span>
+            <span class="kpi-card-icon" style="background:#ecfdf5; color:#047857;">LEAN</span>
+          </div>
+          <div class="kpi-stat-row">
+            <span class="kpi-big-num" id="kpiLeanMass">--</span>
+            <span class="kpi-stat-unit">kg LBM</span>
+          </div>
+          <div class="kpi-pill-wrap" id="kpiFatMassSub">
+            <span style="font-size:11.5px; color:var(--text-secondary); font-family:var(--font-mono);">BMR (Katch)：<strong>--</strong> kcal</span>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-card-header">
+            <span class="kpi-card-title">減重速率與倒數 (RATE / ETA)</span>
+            <span class="kpi-card-icon" style="background:#f1f5f9; color:#475569;">RATE</span>
+          </div>
+          <div class="kpi-stat-row">
+            <span class="kpi-big-num" id="kpiTotalDelta">--</span>
+            <span class="kpi-stat-unit">kg</span>
+          </div>
+          <div class="kpi-pill-wrap" id="kpiRateSub">
+            <span style="font-size:11.5px; color:var(--text-secondary); font-family:var(--font-mono);">抵達 67kg 倒數：--</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="chart-panel-card">
+        <div class="chart-toolbar">
+          <div class="chart-title-block">
+            <h3>週三雙軌體態追蹤曲線</h3>
+            <p>橫軸客觀對齊真實時間座標，紫色虛線為 4 週平滑均線，深灰虛線為 67.0kg 基準線</p>
+          </div>
+          <div class="chart-controls">
+            <div class="chart-range-group">
+              <button class="range-btn active" id="rangeBtnAll" onclick="setChartRange('ALL')">全部</button>
+              <button class="range-btn" id="rangeBtn3M" onclick="setChartRange('3M')">近3個月</button>
+              <button class="range-btn" id="rangeBtn1M" onclick="setChartRange('1M')">近1個月</button>
+            </div>
+            <div class="chart-legend-block">
+              <div class="legend-bullet"><span class="bullet-dot weight"></span> 體重</div>
+              <div class="legend-bullet"><span class="bullet-line-ma"></span> 4W均線</div>
+              <div class="legend-bullet"><span class="bullet-dot fat"></span> 體脂</div>
+              <div class="legend-bullet"><span class="bullet-line-target"></span> 目標67</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-interactive-container" id="chartContainer">
+          <svg id="chartSvg" class="svg-canvas" viewBox="0 0 960 280" preserveAspectRatio="none"></svg>
+          <div class="chart-tooltip" id="chartTooltip"></div>
+        </div>
+      </section>
+
+      <section class="history-table-card">
+        <div class="table-header-bar">
+          <span class="table-header-title">週三量測歷程與體組成審計</span>
+          <span class="table-header-meta" id="tableHeaderCount">共計 0 筆週測</span>
+        </div>
+        <div class="hist-grid-row head">
+          <div>量測日期</div>
+          <div>體重 (kg)</div>
+          <div>前週體重</div>
+          <div>體脂 (%)</div>
+          <div>前週體脂</div>
+          <div>去脂體重 (LBM)</div>
+          <div>週期階段</div>
+        </div>
+        <div id="historyRows"></div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<!-- 底部懸浮快選膠囊底欄 -->
+<aside class="floating-dock-preset" id="dockPresetTray">
+  <div class="dock-meta-info">
+    <div class="dock-tab-toggle">
+      <button class="dock-tab-btn active" id="btnDockRecent" onclick="setDockMode('recent')">⚡ 近15天</button>
+      <button class="dock-tab-btn" id="btnDockStaple" onclick="setDockMode('staple')">🥗 原型必備</button>
+    </div>
+    <div class="dock-target-badge" id="dockTargetBadge">點選餐別填入</div>
+  </div>
+  <div class="dock-chips-scroll" id="dockChipsScroll"></div>
+</aside>
+
+<!-- 跨機同步彈窗 Modal -->
+<div class="modal-overlay" id="syncModal" onclick="closeSyncModal(event)">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title">📲 跨機同步與備份中心</div>
+      <button class="modal-close" onclick="closeSyncModal()">✕</button>
+    </div>
+    <div class="sync-card-row">
+      <span class="sync-label">方案 A：快速剪貼簿同步字串 (手機與電腦傳輸最快)</span>
+      <textarea id="syncDataString" class="sync-textarea" placeholder="點擊「複製當前全部數據」或貼上數據後按還原..."></textarea>
+      <div style="display:flex; gap:8px; margin-top:4px;">
+        <button class="btn-backup" onclick="copySyncData()">📋 複製當前全部數據</button>
+        <button class="btn-backup" onclick="pasteAndRestoreSyncData()" style="color:var(--accent);">📥 貼上並同步還原</button>
+      </div>
+    </div>
+    <div class="sync-card-row" style="margin-top:8px; padding-top:12px; border-top:1px dashed var(--border-subtle);">
+      <span class="sync-label">方案 B：檔案備份與還原</span>
+      <div style="display:flex; gap:8px;">
+        <button class="btn-backup" onclick="exportBackupJson()">匯出 JSON 備份檔</button>
+        <button class="btn-backup" onclick="triggerImportJson()">匯入 JSON 備份檔</button>
+      </div>
+    </div>
+    <div style="font-size:11px; color:var(--text-tertiary); line-height:1.4;">
+      💡 提示：本應用採 Local-First 架構，資料 100% 留存於您的裝置端。若需跨手機與電腦同步，可透過複製上方字串經 LINE / AirDrop 傳送後在另一台裝置一鍵還原。
+    </div>
+  </div>
+</div>
+
+<script>
+  const START_DATE = '2026-09-07';
+  const BASELINE_WEIGHT = 87.0;
+  const TARGET_WEIGHT = 67.0;
+
+  const KEY_RECORDS = 'journal_db_items_unified';
+  const KEY_DATES = 'journal_db_dates_unified';
+  const KEY_METRICS = 'journal_db_metrics_unified';
+
+  const LEGACY_RECORD_KEYS = [
+    'journal_v7_items', 'journal_db_items_final', 'diet_journal_items_prod',
+    'modern_diet_items_v1', 'diet_journal_items_v6', 'diet_journal_items_v5',
+    'diet_journal_items_v4', 'diet_notebook_records'
+  ];
+  const LEGACY_DATE_KEYS = [
+    'journal_v7_dates', 'journal_db_dates_final', 'diet_journal_dates_prod',
+    'modern_diet_dates_v1', 'diet_journal_dates_v6', 'diet_journal_dates_v5', 'diet_journal_dates_v4'
+  ];
+  const LEGACY_METRIC_KEYS = [
+    'journal_v7_metrics', 'journal_db_metrics_final', 'diet_journal_metrics_prod',
+    'modern_diet_metrics_v1', 'diet_journal_metrics_v6', 'diet_journal_metrics_v5', 'diet_journal_metrics_v4'
+  ];
+
+  let records = {};
+  let metrics = {};
+  let activeDates = [];
+  let currentTab = 'journal';
+  let activeFocusTarget = null;
+  let collapsedMonths = new Set();
+  let chartRangeMode = 'ALL'; // ALL, 3M, 1M
+
+  const ledgerRows = document.getElementById('ledgerRows');
+  const btnNextDay = document.getElementById('btnNextDay');
+  const dockPresetTray = document.getElementById('dockPresetTray');
+
+  const parseDate = s => {
+    const p = s.split('-');
+    return new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+  };
+
+  const getTodayISO = () => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  function showToast(msg, type = 'info') {
+    const t = document.getElementById('systemToast');
+    const msgEl = document.getElementById('toastMsg');
+    msgEl.textContent = msg;
+    t.className = `system-toast ${type === 'error' ? 'error' : (type === 'success' ? 'success' : '')}`;
+    t.style.display = 'flex';
+    setTimeout(() => { t.style.display = 'none'; }, 2400);
+  }
+
+  function safeStorageSet(key, val) {
+    try {
+      localStorage.setItem(key, val);
+    } catch (e) {
+      console.error('儲存配額受限:', e);
+      showToast('⚠️ 本地儲存容量已滿，請匯出備份避免遺失！', 'error');
+    }
+  }
+
+  function init() {
+    loadDatabase();
+    ensureDateUpToToday();
+    bindEvents();
+    renderJournal();
+    renderDynamic15DaysPresets();
+  }
+
+  function ensureDateUpToToday() {
+    const today = getTodayISO();
+    if (!activeDates.includes(today) && today > activeDates[activeDates.length - 1]) {
+      // fill up to today
+      let curr = parseDate(activeDates[activeDates.length - 1] || START_DATE);
+      const target = parseDate(today);
+      while (curr < target) {
+        curr.setDate(curr.getDate() + 1);
+        const y = curr.getFullYear();
+        const m = String(curr.getMonth() + 1).padStart(2, '0');
+        const d = String(curr.getDate()).padStart(2, '0');
+        const str = `${y}-${m}-${d}`;
+        if (!activeDates.includes(str)) activeDates.push(str);
+      }
+      saveDates();
+    }
+  }
+
+  function loadFallback(keys) {
+    for (const k of keys) {
+      const raw = localStorage.getItem(k);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) return parsed;
+        } catch(e) {}
+      }
+    }
+    return null;
+  }
+
+  function loadDatabase() {
+    records = JSON.parse(localStorage.getItem(KEY_RECORDS) || '{}');
+    metrics = JSON.parse(localStorage.getItem(KEY_METRICS) || '{}');
+
+    if (!Object.keys(records).length) records = loadFallback(LEGACY_RECORD_KEYS) || {};
+    if (!Object.keys(metrics).length) metrics = loadFallback(LEGACY_METRIC_KEYS) || {};
+
+    Object.keys(records).forEach(date => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        delete records[date];
+        return;
+      }
+      const dayData = records[date];
+      ['breakfast', 'lunch', 'dinner', 'snack'].forEach(meal => {
+        if (Array.isArray(dayData[meal])) {
+          dayData[meal] = dayData[meal].map(item => {
+            if (typeof item === 'string') return item;
+            if (item && typeof item === 'object') return item.text || item.name || '';
+            return String(item || '');
+          }).filter(Boolean);
+        } else {
+          dayData[meal] = [];
+        }
+      });
+    });
+
+    let storedDates = JSON.parse(localStorage.getItem(KEY_DATES) || 'null');
+    if (!Array.isArray(storedDates) || !storedDates.length) {
+      storedDates = loadFallback(LEGACY_DATE_KEYS) || [];
+    }
+
+    const datePool = new Set([START_DATE]);
+    if (Array.isArray(storedDates)) storedDates.forEach(d => datePool.add(d));
+    Object.keys(records).forEach(d => datePool.add(d));
+    Object.keys(metrics).forEach(d => datePool.add(d));
+
+    activeDates = Array.from(datePool)
+      .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
+      .sort((a, b) => a.localeCompare(b));
+
+    saveDates();
+    saveRecords();
+    saveMetrics();
+  }
+
+  function saveRecords() { safeStorageSet(KEY_RECORDS, JSON.stringify(records)); }
+  function saveMetrics() { safeStorageSet(KEY_METRICS, JSON.stringify(metrics)); }
+  function saveDates() { safeStorageSet(KEY_DATES, JSON.stringify(activeDates)); }
+
+  window.openSyncModal = function() {
+    const payload = { records, metrics, activeDates, exportedAt: new Date().toISOString() };
+    document.getElementById('syncDataString').value = JSON.stringify(payload);
+    document.getElementById('syncModal').classList.add('active');
+  };
+
+  window.closeSyncModal = function(e) {
+    if (e && e.target !== document.getElementById('syncModal') && e.target !== document.querySelector('.modal-close')) return;
+    document.getElementById('syncModal').classList.remove('active');
+  };
+
+  window.copySyncData = function() {
+    const txt = document.getElementById('syncDataString');
+    txt.select();
+    navigator.clipboard.writeText(txt.value).then(() => {
+      showToast('✅ 已複製同步字串到剪貼簿！可貼至其他裝置', 'success');
+    }).catch(() => {
+      showToast('已選取字串，請手動複製', 'info');
+    });
+  };
+
+  window.pasteAndRestoreSyncData = function() {
+    const raw = document.getElementById('syncDataString').value.trim();
+    if (!raw) {
+      showToast('請先貼上資料字串！', 'error');
+      return;
+    }
+    try {
+      const data = JSON.parse(raw);
+      if (data.records && typeof data.records === 'object') records = data.records;
+      if (data.metrics && typeof data.metrics === 'object') metrics = data.metrics;
+      if (Array.isArray(data.activeDates) && data.activeDates.length > 0) activeDates = data.activeDates;
+
+      saveRecords();
+      saveMetrics();
+      saveDates();
+
+      renderJournal();
+      renderDynamic15DaysPresets();
+      if (currentTab === 'metrics') renderMetricsDashboard();
+      document.getElementById('syncModal').classList.remove('active');
+      showToast('🎉 資料同步還原成功！', 'success');
+    } catch(e) {
+      showToast('❌ 同步字串格式不正確！', 'error');
+    }
+  };
+
+  window.exportBackupJson = function() {
+    const backupPayload = {
+      version: 'unified_v8_pwa',
+      exportedAt: new Date().toISOString(),
+      metadata: { baselineWeight: BASELINE_WEIGHT, targetWeight: TARGET_WEIGHT },
+      records,
+      metrics,
+      activeDates
+    };
+    const blob = new Blob([JSON.stringify(backupPayload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const nowStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    a.href = url;
+    a.download = `diet_journal_backup_${nowStr}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('備份檔案已順利匯出！', 'success');
+  };
+
+  window.triggerImportJson = function() {
+    document.getElementById('fileImportJson').click();
+  };
+
+  window.handleImportJson = function(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      try {
+        const data = JSON.parse(event.target.result);
+        if (!data || typeof data !== 'object') throw new Error('檔案格式不合規');
+
+        if (data.records && typeof data.records === 'object') records = data.records;
+        if (data.metrics && typeof data.metrics === 'object') metrics = data.metrics;
+        if (Array.isArray(data.activeDates) && data.activeDates.length > 0) activeDates = data.activeDates;
+
+        saveRecords();
+        saveMetrics();
+        saveDates();
+
+        renderJournal();
+        renderDynamic15DaysPresets();
+        if (currentTab === 'metrics') renderMetricsDashboard();
+        showToast('🎉 備份資料已成功還原！', 'success');
+      } catch (err) {
+        alert('還原失敗：檔案非有效的日誌備份 JSON。');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  function getRecent15DaysItems() {
+    if (!activeDates.length) return [];
+    const latestDateStr = activeDates[activeDates.length - 1];
+    const latestDt = parseDate(latestDateStr);
+    const cutoffTime = latestDt.getTime() - 14 * 86400000;
+
+    const freqMap = {};
+    activeDates.forEach(dateStr => {
+      const dt = parseDate(dateStr);
+      if (dt.getTime() >= cutoffTime && dt.getTime() <= latestDt.getTime()) {
+        const dayData = records[dateStr];
+        if (dayData) {
+          ['breakfast', 'lunch', 'dinner', 'snack'].forEach(meal => {
+            (dayData[meal] || []).forEach(rawItem => {
+              const text = (typeof rawItem === 'string' ? rawItem : (rawItem.text || '')).trim().replace(/\s+/g, ' ');
+              if (text) freqMap[text] = (freqMap[text] || 0) + 1;
+            });
+          });
+        }
+      }
+    });
+
+    return Object.entries(freqMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 16)
+      .map(([name, count]) => ({ name, count }));
+  }
+
+  
+  // === v11: 常備原型食材清單 (Staple Whole Foods) ===
+  const STAPLE_WHOLE_FOODS = [
+    { name: '水煮蛋', type: 'protein' },
+    { name: '茶葉蛋', type: 'protein' },
+    { name: '雞胸肉', type: 'protein' },
+    { name: '白蝦', type: 'protein' },
+    { name: '無糖豆漿', type: 'drink' },
+    { name: '黑咖啡', type: 'drink' },
+    { name: '地瓜', type: 'carb' },
+    { name: '香蕉', type: 'carb' },
+    { name: '毛豆仁', type: 'protein' },
+    { name: '嫩豆腐', type: 'protein' },
+    { name: '深綠蔬菜', type: 'veggie' },
+    { name: '燕麥片', type: 'carb' }
+  ];
+
+  let currentDockMode = 'recent'; // 'recent' or 'staple'
+
+  window.setDockMode = function(mode) {
+    currentDockMode = mode;
+    const btnR = document.getElementById('btnDockRecent');
+    const btnS = document.getElementById('btnDockStaple');
+    if (btnR) btnR.className = `dock-tab-btn ${mode === 'recent' ? 'active' : ''}`;
+    if (btnS) btnS.className = `dock-tab-btn ${mode === 'staple' ? 'active' : ''}`;
+    renderDynamic15DaysPresets();
+  };
+
+  function renderDynamic15DaysPresets() {
+    const dockScroll = document.getElementById('dockChipsScroll');
+    if (!dockScroll) return;
+    if (currentDockMode === 'staple') {
+      dockScroll.innerHTML = STAPLE_WHOLE_FOODS.map(f => `
+        <div class="dock-chip macro-tag-chip ${f.type}" onclick="insertFromDock('${escapeHtml(f.name)}')">
+          <span>${escapeHtml(f.name)}</span>
+        </div>
+      `).join('');
+      return;
+    }
+
+    const scrollContainer = document.getElementById('dockChipsScroll');
+    const items = getRecent15DaysItems();
+    scrollContainer.innerHTML = '';
+
+    if (!items.length) {
+      scrollContainer.innerHTML = `<span style="font-size:11.5px; color:var(--text-tertiary);">近 15 天尚無飲食紀錄 (輸入後自動提取)</span>`;
+      return;
+    }
+
+    items.forEach(item => {
+      const chip = document.createElement('div');
+      chip.className = 'dock-chip';
+      chip.innerHTML = `
+        <span>${escapeHtml(item.name)}</span>
+        <span class="dock-chip-count">×${item.count}</span>
+      `;
+      chip.onclick = () => injectPresetToTarget(item.name);
+      scrollContainer.appendChild(chip);
+    });
+  }
+
+  function updateDockTargetIndicator() {
+    const badge = document.getElementById('dockTargetBadge');
+    if (!activeFocusTarget) {
+      badge.textContent = '點選餐別填入';
+      badge.style.color = 'var(--text-tertiary)';
+      badge.style.background = 'transparent';
+      badge.style.borderColor = 'transparent';
+      return;
+    }
+    const mealMap = { breakfast: '早餐', lunch: '午餐', dinner: '晚餐', snack: '點心/飲品' };
+    const p = activeFocusTarget.date.split('-');
+    badge.textContent = `🎯 ${parseInt(p[1], 10)}/${parseInt(p[2], 10)} ${mealMap[activeFocusTarget.meal] || ''}`;
+    badge.style.color = 'var(--accent)';
+    badge.style.background = 'var(--accent-tint)';
+    badge.style.borderColor = 'var(--accent-border)';
+  }
+
+  window.injectPresetToTarget = function(text) {
+    let target = activeFocusTarget;
+    if (!target) {
+      const latestDate = activeDates[activeDates.length - 1] || START_DATE;
+      target = { date: latestDate, meal: 'lunch' };
+      handleCellFocus(target.date, target.meal);
+    }
+    addMeal(target.date, target.meal, text, true);
+  };
+
+  function getNextDate() {
+    const dt = parseDate(activeDates[activeDates.length - 1] || START_DATE);
+    dt.setDate(dt.getDate() + 1);
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const d = String(dt.getDate()).padStart(2, '0');
+    return `${dt.getFullYear()}-${m}-${d}`;
+  }
+
+  function clearCellFocus() {
+    document.querySelectorAll('.meal-cell.cell-focused').forEach(el => el.classList.remove('cell-focused'));
+    activeFocusTarget = null;
+    updateDockTargetIndicator();
+  }
+
+  function bindEvents() {
+    btnNextDay.addEventListener('click', () => {
+      const nextStr = getNextDate();
+      if (!activeDates.includes(nextStr)) {
+        activeDates.push(nextStr);
+        const mKey = nextStr.slice(0, 7);
+        collapsedMonths.delete(mKey);
+        saveDates();
+        renderJournal();
+        renderDynamic15DaysPresets();
+      }
+    });
+
+    // 點擊空白處自動取消焦點
+    document.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.meal-cell') || e.target.closest('.floating-dock-preset') || e.target.closest('.modal-card')) {
+        return;
+      }
+      clearCellFocus();
+    });
+
+    // 行動端鍵盤彈出時自動降低懸浮欄干擾
+    document.addEventListener('focusin', (e) => {
+      if (e.target.tagName === 'INPUT' && !e.target.closest('.floating-dock-preset')) {
+        dockPresetTray.classList.add('keyboard-active');
+      }
+    });
+    document.addEventListener('focusout', (e) => {
+      if (e.target.tagName === 'INPUT') {
+        dockPresetTray.classList.remove('keyboard-active');
+      }
+    });
+  }
+
+  window.scrollToToday = function() {
+    const today = getTodayISO();
+    const mKey = today.slice(0, 7);
+    if (collapsedMonths.has(mKey)) {
+      collapsedMonths.delete(mKey);
+      renderJournal();
+    }
+    const todayRow = document.getElementById(`row-${today}`);
+    if (todayRow) {
+      todayRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      todayRow.style.outline = '2px solid var(--accent)';
+      setTimeout(() => { todayRow.style.outline = 'none'; }, 1800);
+    } else {
+      showToast(`今日 (${today}) 已在日誌中或即將建立`, 'info');
+    }
+  };
+
+  window.navigate = function(tab) {
+    currentTab = tab;
+    const isJ = tab === 'journal';
+    document.getElementById('btnTabJournal').classList.toggle('active', isJ);
+    document.getElementById('btnTabMetrics').classList.toggle('active', !isJ);
+    document.getElementById('viewJournal').classList.toggle('hidden', !isJ);
+    document.getElementById('viewMetrics').classList.toggle('hidden', isJ);
+    document.getElementById('navTitle').textContent = isJ ? '飲食日誌' : '體態工程';
+    
+    dockPresetTray.classList.toggle('hidden', !isJ);
+
+    if (isJ) {
+      renderJournal();
+      renderDynamic15DaysPresets();
+    } else {
+      clearCellFocus();
+      renderMetricsDashboard();
+    }
+  };
+
+  function getWeekday(isoStr) {
+    const days = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+    const day = parseDate(isoStr).getDay();
+    return {
+      name: days[day] || '週日',
+      isWed: day === 3,
+      isSat: day === 6,
+      isSun: day === 0
+    };
+  }
+
+  function formatFullDate(isoStr) {
+    const p = isoStr.split('-');
+    return p.length < 3 ? isoStr : `${p[0]} 年 ${parseInt(p[1], 10)} 月 ${parseInt(p[2], 10)} 日`;
+  }
+
+  function formatShortDate(isoStr) {
+    const p = isoStr.split('-');
+    return p.length < 3 ? isoStr : `${parseInt(p[1], 10)}/${parseInt(p[2], 10)}`;
+  }
+
+  window.toggleMonth = function(mKey) {
+    if (collapsedMonths.has(mKey)) {
+      collapsedMonths.delete(mKey);
+    } else {
+      collapsedMonths.add(mKey);
+    }
+    renderJournal();
+  };
+
+  window.toggleAllMonths = function() {
+    const monthKeys = Array.from(new Set(activeDates.map(d => d.slice(0, 7))));
+    const latestMonth = monthKeys[monthKeys.length - 1];
+    const historicalMonths = monthKeys.filter(m => m !== latestMonth);
+    const allHistoryCollapsed = historicalMonths.every(m => collapsedMonths.has(m));
+
+    if (allHistoryCollapsed) {
+      collapsedMonths.clear();
+      document.getElementById('btnToggleAllMonths').textContent = '全部收合歷史月份';
+    } else {
+      historicalMonths.forEach(m => collapsedMonths.add(m));
+      collapsedMonths.delete(latestMonth);
+      document.getElementById('btnToggleAllMonths').textContent = '全部展開月份';
+    }
+    renderJournal();
+  };
+
+  function renderJournal() {
+    ledgerRows.innerHTML = '';
+    const meals = ['breakfast', 'lunch', 'dinner', 'snack'];
+    const mealLabels = { breakfast: '早餐', lunch: '午餐', dinner: '晚餐', snack: '點心 / 飲品' };
+    const todayStr = getTodayISO();
+
+    const monthGroups = {};
+    activeDates.forEach(date => {
+      const mKey = date.slice(0, 7);
+      if (!monthGroups[mKey]) monthGroups[mKey] = [];
+      monthGroups[mKey].push(date);
+    });
+
+    const monthKeys = Object.keys(monthGroups).sort();
+    document.getElementById('ledgerToolbarInfo').textContent = `共計 ${activeDates.length} 天紀錄 (${monthKeys.length} 個月份)`;
+
+    monthKeys.forEach(mKey => {
+      const datesInMonth = monthGroups[mKey];
+      const isCollapsed = collapsedMonths.has(mKey);
+
+      const block = document.createElement('div');
+      block.className = 'month-group-block';
+
+      const p = mKey.split('-');
+      const monthLabel = `${p[0]} 年 ${parseInt(p[1], 10)} 月`;
+
+      const header = document.createElement('div');
+      header.className = 'month-group-header';
+      header.onclick = () => toggleMonth(mKey);
+      header.innerHTML = `
+        <div class="month-title-wrap">
+          <span class="month-chevron ${isCollapsed ? 'collapsed' : ''}">▼</span>
+          <span>${monthLabel}</span>
+          <span class="month-badge">${datesInMonth.length} 天紀錄</span>
+        </div>
+        <div class="month-fold-hint">${isCollapsed ? '點擊展開 ＋' : '點擊收合 －'}</div>
+      `;
+      block.appendChild(header);
+
+      const rowsContainer = document.createElement('div');
+      rowsContainer.className = `month-group-rows ${isCollapsed ? 'hidden' : ''}`;
+
+      datesInMonth.forEach(date => {
+        const row = document.createElement('div');
+        row.id = `row-${date}`;
+        const wInfo = getWeekday(date);
+        const isToday = date === todayStr;
+
+        let rowClass = 'ledger-row';
+        let dateCellClass = 'date-cell';
+        let weekClass = 'date-week';
+
+        if (isToday) rowClass += ' is-today';
+
+        if (wInfo.isWed) {
+          weekClass += ' wed-highlight';
+        } else if (wInfo.isSat) {
+          rowClass += ' weekend-sat';
+          dateCellClass += ' weekend-sat';
+          weekClass += ' sat-highlight';
+        } else if (wInfo.isSun) {
+          rowClass += ' weekend-sun';
+          dateCellClass += ' weekend-sun';
+          weekClass += ' sun-highlight';
+        }
+
+        row.className = rowClass;
+
+        let wedPillHtml = '';
+        if (wInfo.isWed) {
+          const data = metrics[date] || {};
+          wedPillHtml = `
+            <div class="wed-capsule">
+              <input type="number" step="0.1" placeholder="--" value="${data.weight || ''}"
+                onchange="saveMetric('${date}', 'weight', this.value)"
+                onkeydown="if(event.key==='Enter') this.blur()">
+              <span class="wed-unit">kg</span>
+              <span style="color:#cbd5e1">/</span>
+              <input type="number" step="0.1" placeholder="--" value="${data.fat || ''}"
+                onchange="saveMetric('${date}', 'fat', this.value)"
+                onkeydown="if(event.key==='Enter') this.blur()">
+              <span class="wed-unit">%</span>
+            </div>
+          `;
+        }
+
+        let mealsHtml = meals.map(m => `
+          <div class="meal-cell" id="cell-${date}-${m}" data-meal-label="${mealLabels[m]}" onclick="focusInput('${date}', '${m}')"></div>
+        `).join('');
+
+        let dayRecord = records[date] || {};
+        let proteinMainMealCount = 0;
+        ['breakfast', 'lunch', 'dinner'].forEach(m => {
+          if (dayRecord[m] && dayRecord[m].some(item => PROTEIN_REGEX.test(item))) {
+            proteinMainMealCount++;
+          }
+        });
+        let proteinPillHtml = '';
+        if (proteinMainMealCount > 0) {
+          proteinPillHtml = `<div class="protein-summary-pill" title="今日正餐高蛋白達成率">🥩 蛋白達標 ${proteinMainMealCount}/3 餐</div>`;
+        }
+
+        row.innerHTML = `
+          <div class="${dateCellClass}">
+            <div class="date-title">
+              <span class="date-num">${formatFullDate(date)}</span>
+              ${isToday ? '<span class="today-tag">今日</span>' : ''}
+              <span class="${weekClass}">${wInfo.name}</span>
+              <button class="btn-copy-yesterday" onclick="event.stopPropagation(); copyYesterdayMeals('${date}')" title="複製前一日餐點">⎘ 複製前日</button>
+            </div>
+            ${wedPillHtml}
+            ${proteinPillHtml}
+          </div>
+          ${mealsHtml}
+        `;
+        rowsContainer.appendChild(row);
+      });
+
+      block.appendChild(rowsContainer);
+      ledgerRows.appendChild(block);
+
+      if (!isCollapsed) {
+        datesInMonth.forEach(date => {
+          meals.forEach(m => renderMealCell(date, m));
+        });
+      }
+    });
+
+    btnNextDay.textContent = `＋ 新增下一天 (${formatFullDate(getNextDate())})`;
+    updateStreak();
+  }
+
+  function renderMealCell(date, meal) {
+    const cell = document.getElementById(`cell-${date}-${meal}`);
+    if (!cell) return;
+
+    const items = (records[date] && records[date][meal]) ? records[date][meal] : [];
+
+    const chipsHtml = items.map((text, idx) => {
+      const isProtein = PROTEIN_REGEX.test(text);
+      return `
+        <div class="chip-item">
+          <span class="chip-text" onclick="event.stopPropagation(); editMeal('${date}', '${meal}', ${idx})" title="點擊修改內容">
+            ${isProtein ? '<span class="protein-chip-dot" title="高蛋白優質來源">🥩</span>' : ''}${escapeHtml(text)}
+          </span>
+          <span class="chip-del" onclick="event.stopPropagation(); removeMeal('${date}', '${meal}', ${idx})" title="刪除品項">✕</span>
+        </div>
+      `;
+    }).join('');
+
+    cell.innerHTML = `
+      ${chipsHtml}
+      <input type="text" class="ghost-input" placeholder="" id="input-${date}-${meal}"
+        onfocus="handleCellFocus('${date}', '${meal}')"
+        onkeydown="handleInput(event, '${date}', '${meal}')"
+        onblur="handleBlur('${date}', '${meal}')">
+    `;
+  }
+
+  window.handleCellFocus = function(date, meal) {
+    document.querySelectorAll('.meal-cell.cell-focused').forEach(el => el.classList.remove('cell-focused'));
+    const cell = document.getElementById(`cell-${date}-${meal}`);
+    if (cell) cell.classList.add('cell-focused');
+    activeFocusTarget = { date, meal };
+    updateDockTargetIndicator();
+  };
+
+  window.focusInput = function(date, meal) {
+    const input = document.getElementById(`input-${date}-${meal}`);
+    if (input) input.focus();
+  };
+
+  // 支援多項批次輸入（逗號或換行分隔）
+  window.handleInput = function(e, date, meal) {
+    if (e.isComposing || e.keyCode === 229) return;
+    if (e.key === 'Enter') {
+      const val = e.target.value.trim();
+      if (val) {
+        e.target.value = '';
+        addBatchMeals(date, meal, val, true);
+      }
+    }
+  };
+
+  window.handleBlur = function(date, meal) {
+    const input = document.getElementById(`input-${date}-${meal}`);
+    if (input && input.value.trim()) {
+      const val = input.value.trim();
+      input.value = '';
+      addBatchMeals(date, meal, val, false);
+    }
+  };
+
+  function addBatchMeals(date, meal, text, shouldRefocus) {
+    // 支援中英文逗號或頓號分割
+    const tokens = text.split(/[,，、\n]+/).map(t => t.trim()).filter(Boolean);
+    if (!records[date]) records[date] = { breakfast: [], lunch: [], dinner: [], snack: [] };
+    if (!records[date][meal]) records[date][meal] = [];
+    tokens.forEach(t => records[date][meal].push(t));
+    saveRecords();
+    renderMealCell(date, meal);
+    renderDynamic15DaysPresets();
+    if (shouldRefocus) setTimeout(() => focusInput(date, meal), 10);
+  }
+
+  function addMeal(date, meal, text, shouldRefocus) {
+    addBatchMeals(date, meal, text, shouldRefocus);
+  }
+
+  window.editMeal = function(date, meal, idx) {
+    const updated = prompt('修改餐點品項：', records[date][meal][idx]);
+    if (updated !== null && updated.trim()) {
+      records[date][meal][idx] = updated.trim();
+      saveRecords();
+      renderMealCell(date, meal);
+      renderDynamic15DaysPresets();
+    }
+  };
+
+  window.removeMeal = function(date, meal, idx) {
+    if (records[date]?.[meal]) {
+      const itemText = records[date][meal][idx];
+      if (confirm(`確定要刪除餐點「${itemText}」嗎？`)) {
+        records[date][meal].splice(idx, 1);
+        saveRecords();
+        renderMealCell(date, meal);
+        renderDynamic15DaysPresets();
+      }
+    }
+  };
+
+  window.saveMetric = function(date, field, val) {
+    if (!metrics[date]) metrics[date] = {};
+    metrics[date][field] = val.trim();
+    saveMetrics();
+    if (currentTab === 'metrics') renderMetricsDashboard();
+  };
+
+  window.setChartRange = function(range) {
+    chartRangeMode = range;
+    document.getElementById('rangeBtnAll').classList.toggle('active', range === 'ALL');
+    document.getElementById('rangeBtn3M').classList.toggle('active', range === '3M');
+    document.getElementById('rangeBtn1M').classList.toggle('active', range === '1M');
+    renderMetricsDashboard();
+  };
+
+  /* ================= 體態工程計算引擎 ================= */
+  function renderMetricsDashboard() {
+    const wednesdays = activeDates.filter(d => parseDate(d).getDay() === 3);
+
+    const dataset = [];
+    wednesdays.forEach(d => {
+      const wVal = parseFloat(metrics[d]?.weight);
+      const fVal = parseFloat(metrics[d]?.fat);
+      const hasW = !isNaN(wVal) && wVal > 0;
+      const hasF = !isNaN(fVal) && fVal > 0;
+
+      if (hasW || hasF) {
+        let lean = null;
+        let fatM = null;
+        let bmrVal = null;
+        if (hasW && hasF) {
+          fatM = wVal * (fVal / 100);
+          lean = wVal - fatM;
+          bmrVal = 370 + (21.6 * lean);
+        }
+        dataset.push({
+          date: d,
+          weight: hasW ? wVal : null,
+          fat: hasF ? fVal : null,
+          leanMass: lean,
+          fatMass: fatM,
+          bmr: bmrVal
+        });
+      }
+    });
+
+    const validW = dataset.filter(d => d.weight !== null);
+    const validF = dataset.filter(d => d.fat !== null);
+
+    const latestW = validW[validW.length - 1] || null;
+    const prevW = validW[validW.length - 2] || null;
+    const firstW = validW[0] || null;
+
+    const latestF = validF[validF.length - 1] || null;
+    const prevF = validF[validF.length - 2] || null;
+
+    const curW = latestW ? latestW.weight : BASELINE_WEIGHT;
+    const totalSpan = BASELINE_WEIGHT - TARGET_WEIGHT;
+    const progressPct = Math.max(0, Math.min(100, ((BASELINE_WEIGHT - curW) / totalSpan) * 100));
+    const remainingKg = Math.max(0, curW - TARGET_WEIGHT);
+
+    document.getElementById('trajectoryPercentTag').textContent = `目標達成率 ${progressPct.toFixed(1)}%`;
+    document.getElementById('trajectoryRemainingKg').textContent = remainingKg.toFixed(1);
+    document.getElementById('trajectoryProgressBar').style.width = `${progressPct}%`;
+    document.getElementById('trajectoryCurrentNode').innerHTML = `最新量測：<strong>${latestW ? latestW.weight.toFixed(1) + ' kg' : '尚無'}</strong>`;
+
+    // 更新階段里程碑
+    const stages = [
+      { id: 'stage-1', target: 82.0, title: '階段一: 82.0 kg' },
+      { id: 'stage-2', target: 77.0, title: '階段二: 77.0 kg' },
+      { id: 'stage-3', target: 72.0, title: '階段三: 72.0 kg' },
+      { id: 'stage-4', target: 67.0, title: '階段四: 67.0 kg' }
+    ];
+    stages.forEach(s => {
+      const el = document.getElementById(s.id);
+      if (curW <= s.target) {
+        el.className = 'milestone-stage-item completed';
+      } else if (curW <= s.target + 5.0) {
+        el.className = 'milestone-stage-item current';
+      } else {
+        el.className = 'milestone-stage-item';
+      }
+    });
+
+    let etaHtml = '預估達成日：需累積週測';
+    let rateSubHtml = '抵達 67kg 倒數：等待數據';
+    let isWarning = false;
+
+    if (validW.length >= 2 && latestW && firstW) {
+      const startDt = parseDate(firstW.date);
+      const endDt = parseDate(latestW.date);
+      const elapsedDays = Math.max(7, Math.round((endDt.getTime() - startDt.getTime()) / 86400000));
+      const elapsedWeeks = elapsedDays / 7;
+      const netLossKg = firstW.weight - latestW.weight;
+      const weeklyRate = netLossKg / elapsedWeeks;
+
+      if (remainingKg <= 0) {
+        etaHtml = '🎉 已抵達 67.0kg 目標！';
+        rateSubHtml = '目標已圓滿達成';
+      } else if (weeklyRate > 0.05) {
+        const weeksNeeded = remainingKg / weeklyRate;
+        const daysNeeded = Math.round(weeksNeeded * 7);
+        const etaDate = parseDate(latestW.date);
+        etaDate.setDate(etaDate.getDate() + daysNeeded);
+
+        etaHtml = `預估達成日：<strong>${etaDate.getFullYear()} 年 ${etaDate.getMonth() + 1} 月 ${etaDate.getDate()} 日</strong> (約剩 ${weeksNeeded.toFixed(1)} 週)`;
+        rateSubHtml = `約剩 <strong>${weeksNeeded.toFixed(1)}</strong> 週抵達 (真實均速 ${weeklyRate.toFixed(2)} kg/週)`;
+      } else if (weeklyRate < -0.05) {
+        isWarning = true;
+        etaHtml = `⚠️ 體重反彈增長中 (暫無法推估)`;
+        rateSubHtml = `淨反彈速率：+${Math.abs(weeklyRate).toFixed(2)} kg/週 (需重整赤字)`;
+      } else {
+        isWarning = true;
+        etaHtml = `平原維持期 (±0.0 kg/週)`;
+        rateSubHtml = `體重進入平原震盪期 (需調整代謝消耗)`;
+      }
+    } else if (validW.length === 1) {
+      rateSubHtml = '已建立起始基準 (Week 0)';
+    }
+
+    const etaWrap = document.getElementById('trajectoryEtaWrap');
+    etaWrap.innerHTML = etaHtml;
+    etaWrap.className = `eta-pill ${isWarning ? 'warning' : ''}`;
+    document.getElementById('kpiRateSub').innerHTML = `<span style="font-size:11.5px; color:var(--text-secondary); font-family:var(--font-mono);">${rateSubHtml}</span>`;
+
+    document.getElementById('kpiWeight').textContent = latestW ? latestW.weight.toFixed(1) : '--';
+    document.getElementById('kpiWeightDiffWrap').innerHTML = latestW
+      ? (prevW ? renderBadgeDiff(latestW.weight - prevW.weight, 'kg') : `<span class="badge-diff neutral">基準週測</span>`)
+      : `<span class="badge-diff neutral">無數據</span>`;
+
+    document.getElementById('kpiFat').textContent = latestF ? latestF.fat.toFixed(1) : '--';
+    document.getElementById('kpiFatDiffWrap').innerHTML = latestF
+      ? (prevF ? renderBadgeDiff(latestF.fat - prevF.fat, '%') : `<span class="badge-diff neutral">基準週測</span>`)
+      : `<span class="badge-diff neutral">無數據</span>`;
+
+    if (latestW && latestF) {
+      const fatKg = latestW.weight * (latestF.fat / 100);
+      const leanKg = latestW.weight - fatKg;
+      const bmrVal = 370 + (21.6 * leanKg);
+      document.getElementById('kpiLeanMass').textContent = leanKg.toFixed(1);
+      document.getElementById('kpiFatMassSub').innerHTML = `
+        <span style="font-size:11.5px; color:var(--text-secondary); font-family:var(--font-mono);">
+          BMR (Katch)：<strong style="color:var(--text-primary);">${bmrVal.toFixed(0)}</strong> kcal
+          <span style="color:var(--text-tertiary);font-size:10.5px;">(脂重 ${fatKg.toFixed(1)}kg)</span>
+        </span>
+      `;
+    } else {
+      document.getElementById('kpiLeanMass').textContent = '--';
+      document.getElementById('kpiFatMassSub').innerHTML = `<span style="font-size:11.5px; color:var(--text-secondary); font-family:var(--font-mono);">需體重與體脂同步輸入</span>`;
+    }
+
+    if (validW.length >= 2 && latestW && firstW) {
+      const totDelta = latestW.weight - firstW.weight;
+      document.getElementById('kpiTotalDelta').textContent = (totDelta > 0 ? `+${totDelta.toFixed(1)}` : totDelta.toFixed(1));
+      document.getElementById('kpiTotalDelta').style.color = totDelta <= -0.05 ? 'var(--emerald)' : (totDelta >= 0.05 ? 'var(--amber)' : 'var(--text-primary)');
+    } else {
+      document.getElementById('kpiTotalDelta').textContent = validW.length === 1 ? '0.0' : '--';
+      document.getElementById('kpiTotalDelta').style.color = 'var(--text-primary)';
+    }
+
+    // 根據 chartRangeMode 篩選圖表數據
+    let filteredDataset = [...dataset];
+    if (chartRangeMode !== 'ALL' && dataset.length > 0) {
+      const lastDate = parseDate(dataset[dataset.length - 1].date);
+      const daysBack = chartRangeMode === '1M' ? 30 : 90;
+      const cutoffTime = lastDate.getTime() - daysBack * 86400000;
+      filteredDataset = dataset.filter(d => parseDate(d.date).getTime() >= cutoffTime);
+    }
+    const filteredW = filteredDataset.filter(d => d.weight !== null);
+    const filteredF = filteredDataset.filter(d => d.fat !== null);
+
+    renderInteractiveChart(filteredW, filteredF, filteredDataset);
+    renderHistoryTable(wednesdays);
+  }
+
+  function renderBadgeDiff(diff, unit) {
+    if (diff <= -0.05) return `<span class="badge-diff drop">↓ ${Math.abs(diff).toFixed(1)} ${unit}</span>`;
+    if (diff >= 0.05) return `<span class="badge-diff gain">↑ ${diff.toFixed(1)} ${unit}</span>`;
+    return `<span class="badge-diff neutral">持平 0.0 ${unit}</span>`;
+  }
+
+  /* ================= 互動圖表引擎 ================= */
+  function renderInteractiveChart(validW, validF, dataset) {
+    const svg = document.getElementById('chartSvg');
+    const tooltip = document.getElementById('chartTooltip');
+    const container = document.getElementById('chartContainer');
+    svg.innerHTML = '';
+    tooltip.style.display = 'none';
+
+    if (!validW.length && !validF.length) {
+      svg.innerHTML = `<text x="480" y="140" text-anchor="middle" fill="#94a3b8" font-size="12" font-family="var(--font-mono)">尚無足夠之週三數據以生成軌跡圖表</text>`;
+      return;
+    }
+
+    const W = 960, H = 280;
+    const pL = 55, pR = validF.length ? 55 : 30, pT = 25, pB = 35;
+    const plotW = W - pL - pR;
+    const plotH = H - pT - pB;
+
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    defs.innerHTML = `
+      <linearGradient id="weightAreaGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#2563eb" stop-opacity="0.14"/>
+        <stop offset="100%" stop-color="#2563eb" stop-opacity="0.0"/>
+      </linearGradient>
+    `;
+    svg.appendChild(defs);
+
+    const weights = [...validW.map(d => d.weight), TARGET_WEIGHT, BASELINE_WEIGHT];
+    const minW = Math.floor(Math.min(...weights) - 1.5);
+    const maxW = Math.ceil(Math.max(...weights) + 1.5);
+
+    const fats = validF.length ? validF.map(d => d.fat) : [15, 25];
+    const minF = Math.floor(Math.min(...fats) - 2);
+    const maxF = Math.ceil(Math.max(...fats) + 2);
+
+    for (let i = 0; i <= 4; i++) {
+      const y = pT + (plotH / 4) * i;
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', pL); line.setAttribute('y1', y);
+      line.setAttribute('x2', W - pR); line.setAttribute('y2', y);
+      line.setAttribute('stroke', '#edf2f7');
+      svg.appendChild(line);
+
+      const txtW = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      txtW.setAttribute('x', pL - 10); txtW.setAttribute('y', y + 4);
+      txtW.setAttribute('text-anchor', 'end');
+      txtW.setAttribute('fill', '#2563eb');
+      txtW.setAttribute('font-size', '10.5');
+      txtW.setAttribute('font-weight', '600');
+      txtW.setAttribute('font-family', 'var(--font-mono)');
+      txtW.textContent = (maxW - ((maxW - minW) / 4) * i).toFixed(1);
+      svg.appendChild(txtW);
+
+      if (validF.length) {
+        const txtF = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        txtF.setAttribute('x', W - pR + 10); txtF.setAttribute('y', y + 4);
+        txtF.setAttribute('text-anchor', 'start');
+        txtF.setAttribute('fill', '#d97706');
+        txtF.setAttribute('font-size', '10.5');
+        txtF.setAttribute('font-weight', '600');
+        txtF.setAttribute('font-family', 'var(--font-mono)');
+        txtF.textContent = (maxF - ((maxF - minF) / 4) * i).toFixed(1) + '%';
+        svg.appendChild(txtF);
+      }
+    }
+
+    const targetY = pT + plotH - ((TARGET_WEIGHT - minW) / (maxW - minW)) * plotH;
+    const targetLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    targetLine.setAttribute('x1', pL); targetLine.setAttribute('y1', targetY);
+    targetLine.setAttribute('x2', W - pR); targetLine.setAttribute('y2', targetY);
+    targetLine.setAttribute('stroke', '#94a3b8');
+    targetLine.setAttribute('stroke-width', '1.5');
+    targetLine.setAttribute('stroke-dasharray', '4 4');
+    svg.appendChild(targetLine);
+
+    const targetLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    targetLabel.setAttribute('x', W - pR - 6); targetLabel.setAttribute('y', targetY - 6);
+    targetLabel.setAttribute('text-anchor', 'end');
+    targetLabel.setAttribute('fill', '#64748b');
+    targetLabel.setAttribute('font-size', '10');
+    targetLabel.setAttribute('font-family', 'var(--font-mono)');
+    targetLabel.textContent = '目標 67.0 kg';
+    svg.appendChild(targetLabel);
+
+    const allWedDates = dataset.map(d => d.date);
+    const tMin = parseDate(allWedDates[0]).getTime();
+    const tMax = parseDate(allWedDates[allWedDates.length - 1]).getTime();
+    const tSpan = Math.max(1, tMax - tMin);
+
+    const getXPos = dStr => {
+      if (tSpan === 1) return pL + plotW / 2;
+      const t = parseDate(dStr).getTime();
+      return pL + ((t - tMin) / tSpan) * plotW;
+    };
+
+    if (validW.length) {
+      const ptsW = validW.map(d => ({
+        x: getXPos(d.date),
+        y: pT + plotH - ((d.weight - minW) / (maxW - minW)) * plotH,
+        val: d.weight,
+        date: d.date
+      }));
+
+      if (ptsW.length >= 2) {
+        const areaPath = `M ${ptsW[0].x},${ptsW[0].y} ` + ptsW.slice(1).map(p => `L ${p.x},${p.y}`).join(' ') + ` L ${ptsW[ptsW.length - 1].x},${pT + plotH} L ${ptsW[0].x},${pT + plotH} Z`;
+        const areaElem = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        areaElem.setAttribute('d', areaPath);
+        areaElem.setAttribute('fill', 'url(#weightAreaGrad)');
+        svg.appendChild(areaElem);
+
+        const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+        polyline.setAttribute('fill', 'none');
+        polyline.setAttribute('stroke', '#2563eb');
+        polyline.setAttribute('stroke-width', '2.2');
+        polyline.setAttribute('stroke-linecap', 'round');
+        polyline.setAttribute('stroke-linejoin', 'round');
+        polyline.setAttribute('points', ptsW.map(p => `${p.x},${p.y}`).join(' '));
+        svg.appendChild(polyline);
+      }
+
+      ptsW.forEach(p => {
+        const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        c.setAttribute('cx', p.x); c.setAttribute('cy', p.y);
+        c.setAttribute('r', '3.5');
+        c.setAttribute('fill', '#ffffff'); c.setAttribute('stroke', '#2563eb'); c.setAttribute('stroke-width', '2');
+        svg.appendChild(c);
+      });
+    }
+
+    const maMap = {};
+    if (validW.length >= 2) {
+      const ptsMA = validW.map((d, idx) => {
+        const startIdx = Math.max(0, idx - 4 + 1);
+        const windowSlice = validW.slice(startIdx, idx + 1);
+        const sum = windowSlice.reduce((acc, curr) => acc + curr.weight, 0);
+        const avg = sum / windowSlice.length;
+        maMap[d.date] = avg;
+
+        return {
+          x: getXPos(d.date),
+          y: pT + plotH - ((avg - minW) / (maxW - minW)) * plotH,
+          val: avg,
+          date: d.date
+        };
+      });
+
+      const polylineMA = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      polylineMA.setAttribute('fill', 'none');
+      polylineMA.setAttribute('stroke', '#6366f1');
+      polylineMA.setAttribute('stroke-width', '2');
+      polylineMA.setAttribute('stroke-linecap', 'round');
+      polylineMA.setAttribute('stroke-linejoin', 'round');
+      polylineMA.setAttribute('stroke-dasharray', '5 3');
+      polylineMA.setAttribute('points', ptsMA.map(p => `${p.x},${p.y}`).join(' '));
+      svg.appendChild(polylineMA);
+    }
+
+    if (validF.length) {
+      const ptsF = validF.map(d => ({
+        x: getXPos(d.date),
+        y: pT + plotH - ((d.fat - minF) / (maxF - minF)) * plotH,
+        val: d.fat,
+        date: d.date
+      }));
+
+      if (ptsF.length >= 2) {
+        const polylineF = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+        polylineF.setAttribute('fill', 'none');
+        polylineF.setAttribute('stroke', '#d97706');
+        polylineF.setAttribute('stroke-width', '2');
+        polylineF.setAttribute('stroke-linecap', 'round');
+        polylineF.setAttribute('stroke-linejoin', 'round');
+        polylineF.setAttribute('points', ptsF.map(p => `${p.x},${p.y}`).join(' '));
+        svg.appendChild(polylineF);
+      }
+
+      ptsF.forEach(p => {
+        const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        c.setAttribute('cx', p.x); c.setAttribute('cy', p.y);
+        c.setAttribute('r', '3');
+        c.setAttribute('fill', '#ffffff'); c.setAttribute('stroke', '#d97706'); c.setAttribute('stroke-width', '2');
+        svg.appendChild(c);
+      });
+    }
+
+    const step = allWedDates.length > 10 ? Math.ceil(allWedDates.length / 8) : 1;
+    allWedDates.forEach((dStr, idx) => {
+      if (idx % step === 0 || idx === allWedDates.length - 1) {
+        const tDate = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        tDate.setAttribute('x', getXPos(dStr)); tDate.setAttribute('y', H - 10);
+        tDate.setAttribute('text-anchor', 'middle');
+        tDate.setAttribute('fill', '#64748b');
+        tDate.setAttribute('font-size', '11');
+        tDate.setAttribute('font-family', 'var(--font-mono)');
+        tDate.textContent = formatShortDate(dStr);
+        svg.appendChild(tDate);
+      }
+    });
+
+    const crosshair = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    crosshair.setAttribute('y1', pT); crosshair.setAttribute('y2', pT + plotH);
+    crosshair.setAttribute('stroke', '#64748b'); crosshair.setAttribute('stroke-width', '1');
+    crosshair.setAttribute('stroke-dasharray', '2 2');
+    crosshair.style.display = 'none';
+    svg.appendChild(crosshair);
+
+    container.onmousemove = e => {
+      const rect = container.getBoundingClientRect();
+      const targetSvgX = (e.clientX - rect.left) * (W / rect.width);
+
+      if (targetSvgX < pL - 10 || targetSvgX > W - pR + 10 || !allWedDates.length) {
+        crosshair.style.display = 'none';
+        tooltip.style.display = 'none';
+        return;
+      }
+
+      let closestDate = allWedDates[0];
+      let minDistance = Infinity;
+      allWedDates.forEach(d => {
+        const dist = Math.abs(getXPos(d) - targetSvgX);
+        if (dist < minDistance) { minDistance = dist; closestDate = d; }
+      });
+
+      const matched = dataset.find(d => d.date === closestDate);
+      if (!matched) return;
+
+      const posX = getXPos(closestDate);
+      crosshair.setAttribute('x1', posX); crosshair.setAttribute('x2', posX);
+      crosshair.style.display = 'block';
+
+      let html = `<div class="tooltip-date">${formatFullDate(closestDate)}</div>`;
+      if (matched.weight !== null) {
+        html += `<div class="tooltip-row"><span>體重:</span><span style="color:#60a5fa">${matched.weight.toFixed(1)} kg</span></div>`;
+        if (maMap[closestDate] !== undefined) {
+          html += `<div class="tooltip-row"><span>4週均線(MA):</span><span style="color:#818cf8">${maMap[closestDate].toFixed(1)} kg</span></div>`;
+        }
+      }
+      if (matched.fat !== null) html += `<div class="tooltip-row"><span>體脂率:</span><span style="color:#fbbf24">${matched.fat.toFixed(1)} %</span></div>`;
+      if (matched.leanMass !== null) {
+        html += `<div class="tooltip-row"><span>去脂(LBM):</span><span style="color:#34d399">${matched.leanMass.toFixed(1)} kg</span></div>`;
+        if (matched.bmr !== null) html += `<div class="tooltip-row"><span>BMR:</span><span style="color:#f59e0b">${matched.bmr.toFixed(0)} kcal</span></div>`;
+      }
+
+      tooltip.innerHTML = html;
+      tooltip.style.display = 'flex';
+
+      const domX = (posX / W) * rect.width;
+      tooltip.style.left = `${domX + 14 + 160 > rect.width ? domX - 160 : domX + 14}px`;
+      tooltip.style.top = `30px`;
+    };
+
+    container.onmouseleave = () => {
+      crosshair.style.display = 'none';
+      tooltip.style.display = 'none';
+    };
+  }
+
+  function renderHistoryTable(wednesdays) {
+    const rowsWrap = document.getElementById('historyRows');
+    rowsWrap.innerHTML = '';
+    document.getElementById('tableHeaderCount').textContent = `共計 ${wednesdays.length} 筆週測`;
+
+    if (!wednesdays.length) {
+      rowsWrap.innerHTML = `<div style="padding:30px;text-align:center;color:var(--text-tertiary);font-family:var(--font-mono);">尚未記錄任何週三數據</div>`;
+      return;
+    }
+
+    wednesdays.forEach((dStr, idx) => {
+      const m = metrics[dStr] || {};
+      const wNum = parseFloat(m.weight);
+      const fNum = parseFloat(m.fat);
+      const hasW = !isNaN(wNum) && wNum > 0;
+      const hasF = !isNaN(fNum) && fNum > 0;
+
+      let wDiffHtml = `<span style="color:var(--text-tertiary)">--</span>`;
+      if (idx > 0 && hasW) {
+        for (let j = idx - 1; j >= 0; j--) {
+          const prevWeight = parseFloat(metrics[wednesdays[j]]?.weight);
+          if (!isNaN(prevWeight) && prevWeight > 0) {
+            wDiffHtml = renderBadgeDiff(wNum - prevWeight, 'kg');
+            break;
+          }
+        }
+      }
+
+      let fDiffHtml = `<span style="color:var(--text-tertiary)">--</span>`;
+      if (idx > 0 && hasF) {
+        for (let j = idx - 1; j >= 0; j--) {
+          const prevFat = parseFloat(metrics[wednesdays[j]]?.fat);
+          if (!isNaN(prevFat) && prevFat > 0) {
+            fDiffHtml = renderBadgeDiff(fNum - prevFat, '%');
+            break;
+          }
+        }
+      }
+
+      const row = document.createElement('div');
+      row.className = 'hist-grid-row';
+      row.innerHTML = `
+        <div style="font-weight:700; color:var(--text-primary); font-family:var(--font-mono); font-size:12px;">${formatFullDate(dStr)}</div>
+        <div class="table-input-cell">
+          <input type="number" step="0.1" class="table-metric-input" placeholder="--" value="${m.weight || ''}"
+            onchange="saveMetric('${dStr}', 'weight', this.value)">
+          <span style="font-size:11px;color:var(--text-tertiary);font-weight:600;">kg</span>
+        </div>
+        <div>${wDiffHtml}</div>
+        <div class="table-input-cell">
+          <input type="number" step="0.1" class="table-metric-input" placeholder="--" value="${m.fat || ''}"
+            onchange="saveMetric('${dStr}', 'fat', this.value)">
+          <span style="font-size:11px;color:var(--text-tertiary);font-weight:600;">%</span>
+        </div>
+        <div>${fDiffHtml}</div>
+        <div style="font-family:var(--font-mono); font-weight:700; color:var(--emerald);">${(hasW && hasF) ? (wNum * (1 - fNum / 100)).toFixed(1) + ' kg' : '--'}</div>
+        <div style="color:var(--text-tertiary); font-size:11.5px; font-family:var(--font-mono);">${idx === 0 ? '基準週 (Week 0)' : `第 ${idx} 週`}</div>
+      `;
+      rowsWrap.appendChild(row);
+    });
+  }
+
+  function escapeHtml(val) {
+    if (typeof val !== 'string') {
+      val = (val && typeof val === 'object') ? (val.text || val.name || JSON.stringify(val)) : String(val == null ? '' : val);
+    }
+    return val.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  
+  // === v11: 離線 PWA 快取支援 (Service Worker via Blob) ===
+  if ('serviceWorker' in navigator) {
+    try {
+      const swCode = `
+        const CACHE_NAME = 'diet-pwa-v11';
+        self.addEventListener('install', e => { self.skipWaiting(); });
+        self.addEventListener('activate', e => { e.waitUntil(clients.claim()); });
+        self.addEventListener('fetch', e => {
+          e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+        });
+      `;
+      const blob = new Blob([swCode], { type: 'application/javascript' });
+      const swUrl = URL.createObjectURL(blob);
+      navigator.serviceWorker.register(swUrl).catch(() => {});
+    } catch(err) {}
+  }
+
+  window.onload = () => {
+    init();
+    initTheme();
+  };
+
+</script>
+
+  <!-- 鍵盤快捷鍵說明彈窗 Modal -->
+  <div id="shortcutsModal" class="modal-overlay" onclick="closeShortcutsModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">⌨️ 鍵盤高效率快捷鍵</div>
+        <button class="modal-close" onclick="closeShortcutsModal()">✕</button>
+      </div>
+      <div class="shortcut-list">
+        <div class="shortcut-item"><span>切換至飲食日誌</span><kbd class="shortcut-kbd">1</kbd></div>
+        <div class="shortcut-item"><span>切換至體態工程</span><kbd class="shortcut-kbd">2</kbd></div>
+        <div class="shortcut-item"><span>回到今天位置</span><kbd class="shortcut-kbd">T</kbd></div>
+        <div class="shortcut-item"><span>切換深色／淺色主題</span><kbd class="shortcut-kbd">D</kbd></div>
+        <div class="shortcut-item"><span>聚焦飲食搜尋框</span><kbd class="shortcut-kbd">/</kbd></div>
+        <div class="shortcut-item"><span>退出輸入焦點</span><kbd class="shortcut-kbd">Esc</kbd></div>
+      </div>
+      <div style="font-size:11.5px; color:var(--text-tertiary); text-align:center;">
+        提示：在未處於文字輸入狀態下按鍵即可即時觸發快速操作。
+      </div>
+    </div>
+  </div>
+</body>
+</html>
